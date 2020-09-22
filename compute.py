@@ -58,3 +58,49 @@ def computePmt(df : pd.DataFrame,year=1,ptype=LoanPaymentType.Payment):
     elif ptype == LoanPaymentType.Principial: return ppmt
     elif ptype == LoanPaymentType.Payment: return ipmt+ppmt
     else: assert(0,"illegal payment type")
+        
+def computeProjectSimple(projectName, numberUnits, price, rent, expenseRate, ltv, loanRatePer, rentPF,expenseRatePF,capPF,repairs=0):
+    debtPmtPerYr = np.pmt(loanRatePer/100/12., 360,price*ltv/100.,)*-12
+    noi=computeNoi(rent,expenseRate)    
+    noiPF=computeNoi(rentPF,expenseRatePF)    
+    pricePF=noiPF/(capPF/100.)
+
+    print("""
+    Project   : {Project}
+    Purchase  : ${Price:,}
+    rent roll : ${Rent:,}
+    NOI       : ${Noi:,.0f}  
+    Expen Rate: {ExpRatio:.0f}%
+    Cap Rate  : {Cap:.2f}%        
+    DebService:
+       amount - ${LoanV:,.0f}
+       rate   - {LoanRatePer}%
+       payment- {Payment:,.0f}$
+    DSCR      : {Dscr:2.2f}%  
+    """.format(
+        Project=projectName,
+        Price=price,
+        Rent=rent *12,
+        Cap = computeCap(rent,price, expenseRate),
+        Noi = noi,
+        ExpRatio=expenseRate,
+        LoanV = price*ltv/100.,
+        Payment=debtPmtPerYr,
+        Dscr=noi / debtPmtPerYr,
+        LoanRatePer=loanRatePer
+         ))
+    print("""    
+    Basis     : ${Basis:,.0f}
+    Cap Rate  : {Cap:.2f}%        
+    rent roll : ${Rent:,.0f}
+    NOI       : ${Noi:,.0f}
+    Expen Rate: {ExpRatio}%    
+    Price     : ${Price:,.0f} @ cap({CapPF:.2f}%)
+    """.format(            
+        Basis = price+repairs,
+        Rent=rentPF*12,
+        Cap = computeCap(rentPF,price+repairs, expenseRatePF),
+        Noi = noiPF,
+        ExpRatio=expenseRatePF,
+        CapPF=capPF,
+        Price=pricePF))        

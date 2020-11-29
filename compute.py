@@ -7,14 +7,14 @@ def computeNoi(rent, expenseRate=35):
     return rent *12 *(100-expenseRate)/100.
 def computeCap(rent, price, expenses=35):
     """
-    rent - monthly price
+    rent - annual price
     price
     
     expenses ; 0 to 100 for a rate, otherwise dollar ammount
     return cap rate [%]
     """
     if expenses<100:
-        return computeNoi(rent,expenses)/price * 100
+        return rent*(100-expenses)/100./price * 100
     else:
         return (rent-expenses)/price * 100
 def computeRoi(rent, price,Ltv,loanRatePer,expenses=.35):
@@ -59,48 +59,54 @@ def computePmt(df : pd.DataFrame,year=1,ptype=LoanPaymentType.Payment):
     elif ptype == LoanPaymentType.Payment: return ipmt+ppmt
     else: assert(0,"illegal payment type")
         
-def computeProjectSimple(projectName, numberUnits, price, rent, expenseRate, ltv, loanRatePer, rentPF,expenseRatePF,capPF,repairs=0):
-    debtPmtPerYr = np.pmt(loanRatePer/100/12., 360,price*ltv/100.,)*-12
+def computeProjectSimple(projectName, numberUnits, price, rent, expenseRate, carry, ltv, loanRatePer, rentPF,expenseRatePF,capPF,repairs=0, show=3,description=""):
+    """
+    print 3--> all, 1--> current, 2--> proforma
+    """
+    debtPmtPerYr = np.pmt(loanRatePer/100/12., 360,(price-carry)*ltv/100.,)*-12
     noi=computeNoi(rent,expenseRate)    
     noiPF=computeNoi(rentPF,expenseRatePF)    
     pricePF=noiPF/(capPF/100.)
-
-    print("""
-    Project   : {Project}
-    Purchase  : ${Price:,}
-    rent roll : ${Rent:,}
-    NOI       : ${Noi:,.0f}  
-    Expen Rate: {ExpRatio:.0f}%
-    Cap Rate  : {Cap:.2f}%        
-    DebService:
-       amount - ${LoanV:,.0f}
-       rate   - {LoanRatePer}%
-       payment- {Payment:,.0f}$
-    DSCR      : {Dscr:2.2f}%  
-    """.format(
-        Project=projectName,
-        Price=price,
-        Rent=rent *12,
-        Cap = computeCap(rent,price, expenseRate),
-        Noi = noi,
-        ExpRatio=expenseRate,
-        LoanV = price*ltv/100.,
-        Payment=debtPmtPerYr,
-        Dscr=noi / debtPmtPerYr,
-        LoanRatePer=loanRatePer
-         ))
-    print("""    
-    Basis     : ${Basis:,.0f}
-    Cap Rate  : {Cap:.2f}%        
-    rent roll : ${Rent:,.0f}
-    NOI       : ${Noi:,.0f}
-    Expen Rate: {ExpRatio}%    
-    Price     : ${Price:,.0f} @ cap({CapPF:.2f}%)
-    """.format(            
-        Basis = price+repairs,
-        Rent=rentPF*12,
-        Cap = computeCap(rentPF,price+repairs, expenseRatePF),
-        Noi = noiPF,
-        ExpRatio=expenseRatePF,
-        CapPF=capPF,
-        Price=pricePF))        
+    if show & 0x1:
+        print("""
+        Project   : {Project}
+        Purchase  : ${Price:,}
+        rent roll : ${Rent:,}
+        NOI       : ${Noi:,.0f}  
+        Expen Rate: {ExpRatio:.0f}%
+        Cap Rate  : {Cap:.2f}%        
+        DebService:
+           amount - ${LoanV:,.0f}
+           rate   - {LoanRatePer}%
+           payment- {Payment:,.0f}$
+        DSCR      : {Dscr:2.2f}%  
+        """.format(
+            Project=projectName,
+            Price=price,
+            Rent=rent *12,
+            Cap = computeCap(rent*12,price, expenseRate),
+            Noi = noi,
+            ExpRatio=expenseRate,
+            LoanV = price*ltv/100.,
+            Payment=debtPmtPerYr,
+            Dscr=noi / debtPmtPerYr,
+            LoanRatePer=loanRatePer
+             ))
+    if show & 0x2:
+        print("""    
+        Descript  : {Description}
+        Basis     : ${Basis:,.0f}
+        Cap Rate  : {Cap:.2f}%        
+        rent roll : ${Rent:,.0f}
+        NOI       : ${Noi:,.0f}
+        Expen Rate: {ExpRatio}%    
+        Price     : ${Price:,.0f} @ cap({CapPF:.2f}%)
+        """.format(            
+            Description=description,
+            Basis = price+repairs,
+            Rent=rentPF*12,
+            Cap = computeCap(rentPF*12,price+repairs, expenseRatePF),
+            Noi = noiPF,
+            ExpRatio=expenseRatePF,
+            CapPF=capPF,
+            Price=pricePF))        
